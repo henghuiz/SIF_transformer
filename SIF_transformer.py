@@ -11,8 +11,8 @@ class SIFEmbeddingVectorizer(BaseEstimator):
         self.rmpc = rmpc
 
         (self.words, self.We) = SIF.getWordmap(word2vec)
-        word2weight = SIF.getWordWeight(word_frequency, weightpara)
-        self.weight4ind = SIF.getWeight(self.words, word2weight)
+        word2weight = SIF.get_word_weight(word_frequency, weightpara)
+        self.weight4ind = SIF.get_weight(self.words, word2weight)
 
     def fit(self, X, y):
         return self
@@ -22,11 +22,8 @@ class SIFEmbeddingVectorizer(BaseEstimator):
         # x is the array of word indices, m is the binary mask indicating whether there is a word in that location
         w = SIF.seq2weight(x, m, self.weight4ind)  # get word weights
 
-        # set parameters
-        params = SIF.SIFParameter()
-        params.rmpc = self.rmpc
         # get SIF embedding
-        embedding = SIF.SIF_embedding(self.We, x, w, params)  # embedding[i,:] is the embedding for sentence i
+        embedding = SIF.SIF_embedding(self.We, x, w, self.rmpc)  # embedding[i,:] is the embedding for sentence i
 
         return embedding
 

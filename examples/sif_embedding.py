@@ -1,9 +1,11 @@
-import sys, numpy
+import sys
+import numpy as np
 sys.path.append('../src')
+
 import data_io, params, SIF_embedding
 
 # input
-wordfile = '../data/glove.840B.300d.txt' # word vector file, can be downloaded from GloVe website; it's quite large but you can truncate it and use only say the top 50000 word vectors to save time
+wordfile = '../data/glove.6B.50d.txt' # word vector file, can be downloaded from GloVe website; it's quite large but you can truncate it and use only say the top 50000 word vectors to save time
 weightfile = '../auxiliary_data/enwiki_vocab_min200.txt' # each line is a word and its frequency
 weightpara = 1e-3 # the parameter in the SIF weighting scheme, usually in the range [3e-5, 3e-3]
 rmpc = 1 # number of principal components to remove in SIF weighting scheme
@@ -27,6 +29,8 @@ embedding = SIF_embedding.SIF_embedding(We, x, w, params) # embedding[i,:] is th
 emb1 = embedding[0,:]
 emb2 = embedding[1,:]
 inn = (emb1 * emb2).sum()
-emb1norm = numpy.sqrt((emb1 * emb1).sum())
-emb2norm = numpy.sqrt((emb2 * emb2).sum())
+emb1norm = np.sqrt((emb1 * emb1).sum())
+emb2norm = np.sqrt((emb2 * emb2).sum())
 score = inn / emb1norm / emb2norm
+
+print(score)

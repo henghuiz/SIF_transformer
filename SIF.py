@@ -1,6 +1,92 @@
 import numpy as np
 import pickle
-from tree import tree
+from sklearn.decomposition import TruncatedSVD
+
+
+class SIFParameter(object):
+    def __init__(self):
+        self.LW = 1e-5
+        self.LC = 1e-5
+        self.eta = 0.05
+
+    def __str__(self):
+        t = "LW", self.LW, ", LC", self.LC, ", eta", self.eta
+        t = map(str, t)
+        return ' '.join(t)
+
+
+def get_weighted_average(We, x, w):
+    """
+    Compute the weighted average vectors
+    :param We: We[i,:] is the vector for word i
+    :param x: x[i, :] are the indices of the words in sentence i
+    :param w: w[i, :] are the weights for the words in sentence i
+    :return: emb[i, :] are the weighted average vector for sentence i
+    """
+    n_samples = x.shape[0]
+    emb = np.zeros((n_samples, We.shape[1]))
+    for i in range(n_samples):
+        emb[i, :] = w[i, :].dot(We[x[i, :], :]) / np.count_nonzero(w[i, :])
+    return emb
+
+
+def compute_pc(X, npc=1):
+    """
+    Compute the principal components. DO NOT MAKE THE DATA ZERO MEAN!
+    :param X: X[i,:] is a data point
+    :param npc: number of principal components to remove
+    :return: component_[i,:] is the i-th pc
+    """
+    svd = TruncatedSVD(n_components=npc, n_iter=7, random_state=0)
+    svd.fit(X)
+    return svd.components_
+
+
+def remove_pc(X, npc=1):
+    """
+    Remove the projection on the principal components
+    :param X: X[i,:] is a data point
+    :param npc: number of principal components to remove
+    :return: XX[i, :] is the data point after removing its projection
+    """
+    pc = compute_pc(X, npc)
+    if npc == 1:
+        XX = X - X.dot(pc.transpose()) * pc
+    else:
+        XX = X - X.dot(pc.transpose()).dot(pc)
+    return XX
+
+
+def SIF_embedding(We, x, w, params):
+    """
+    Compute the scores between pairs of sentences using weighted average + removing the projection on the first principal component
+    :param We: We[i,:] is the vector for word i
+    :param x: x[i, :] are the indices of the words in the i-th sentence
+    :param w: w[i, :] are the weights for the words in the i-th sentence
+    :param params.rmpc: if >0, remove the projections of the sentence embeddings to their first principal component
+    :return: emb, emb[i, :] is the embedding for sentence i
+    """
+    emb = get_weighted_average(We, x, w)
+    if params.rmpc > 0:
+        emb = remove_pc(emb, params.rmpc)
+    return emb
+
+
+class tree(object):
+
+    def __init__(self, phrase, words):
+        self.phrase = phrase
+        self.embeddings = []
+        self.representation = None
+
+    def populate_embeddings(self, words):
+        phrase = self.phrase.lower()
+        arr = phrase.split()
+        for i in arr:
+            self.embeddings.append(lookupIDX(words, i))
+
+    def unpopulate_embeddings(self):
+        self.embeddings = []
 
 
 # from theano import config

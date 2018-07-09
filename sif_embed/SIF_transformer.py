@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.decomposition import TruncatedSVD
+from nltk.tokenize import WordPunctTokenizer
 
 
 def get_weighted_average(embedding, x, w):
@@ -83,9 +84,8 @@ def lookupIDX(words, w):
     else:
         return len(words) - 1
 
-
+# TODO: simplify this
 def get_sequences(p1, words):
-    p1 = p1.split()
     X1 = []
     for i in p1:
         X1.append(lookupIDX(words, i))
@@ -148,15 +148,21 @@ def seq2weight(seq, mask, weight4ind):
     return weight
 
 
+def simple_tokenizer(x):
+    return WordPunctTokenizer().tokenize(x)
+
+
 class SIFEmbeddingVectorizer(BaseEstimator):
-    def __init__(self, word2vec, word_frequency, weightpara=1e-3, rmpc=1):
-        vocab = list(word2vec.vocab)
-        self.words = {word: word_id for word_id, word in enumerate(vocab)}
-        self.word_embeddings = np.array([word2vec[token] for token in vocab])
+    def __init__(self, word2vec, word_frequency, tokenizer=None, stopword=None, weightpara=1e-3, rmpc=1):
+        self.vocab = list(word2vec.vocab)
+        self.words = {word: word_id for word_id, word in enumerate(self.vocab)}
+        self.word_embeddings = np.array([word2vec[token] for token in self.vocab])
 
         self.word_frequency = word_frequency
         self.weightpara = weightpara
         self.rmpc = rmpc
+        self.tokenizer = tokenizer or simple_tokenizer
+        self.stopword = stopword or set()
 
         word2weight = get_word_weight(word_frequency, weightpara)
         self.weight4ind = get_weight(self.words, word2weight)
@@ -165,11 +171,13 @@ class SIFEmbeddingVectorizer(BaseEstimator):
         return self
 
     def transform(self, X):
+        # TODO: improve this later
+        X = [[w for w in self.tokenizer(sent) if (w in self.vocab) and (w not in self.stopword)] for sent in X]
         x, m = sentences2idx(X, self.words)
         # x is the array of word indices, m is the binary mask indicating whether there is a word in that location
         w = seq2weight(x, m, self.weight4ind)  # get word weights
 
-        # get SIF embedding
+        # get sif_embed embedding
         embedding = SIF_embedding(self.word_embeddings, x, w, self.rmpc)
         # embedding[i,:] is the embedding for sentence i
         return embedding
@@ -177,9 +185,11 @@ class SIFEmbeddingVectorizer(BaseEstimator):
 
 def main():
     import gensim
-    model = gensim.models.KeyedVectors.load_word2vec_format('data/glove.6B.50d_gensim.txt', binary=False)
+    from nltk.corpus import stopwords
+
+    model = gensim.models.KeyedVectors.load_word2vec_format('../data/glove.6B.50d_gensim.txt', binary=False)
     # each line is a word and its frequency
-    weightfile = 'auxiliary_data/enwiki_vocab_min200.txt'
+    weightfile = '../auxiliary_data/enwiki_vocab_min200.txt'
 
     transformer = SIFEmbeddingVectorizer(model, weightfile)
 

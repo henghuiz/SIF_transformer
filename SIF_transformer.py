@@ -1,5 +1,5 @@
-from sklearn.base import BaseEstimator
 import numpy as np
+from sklearn.base import BaseEstimator
 from sklearn.decomposition import TruncatedSVD
 
 
@@ -57,23 +57,6 @@ def SIF_embedding(embedding, x, w, rmpc):
     if rmpc > 0:
         emb = remove_pc(emb, rmpc)
     return emb
-
-
-def load_word2vec(textfile):
-    words = {}
-    We = []
-    f = open(textfile, 'r')
-    lines = f.readlines()
-    for (n, i) in enumerate(lines):
-        i = i.split()
-        j = 1
-        v = []
-        while j < len(i):
-            v.append(float(i[j]))
-            j += 1
-        words[i[0]] = n
-        We.append(v)
-    return (words, np.array(We))
 
 
 def prepare_data(list_of_seqs):
@@ -167,16 +150,18 @@ def seq2weight(seq, mask, weight4ind):
 
 class SIFEmbeddingVectorizer(BaseEstimator):
     def __init__(self, word2vec, word_frequency, weightpara=1e-3, rmpc=1):
-        self.word2vec = word2vec
+        vocab = list(word2vec.vocab)
+        self.words = {word: word_id for word_id, word in enumerate(vocab)}
+        self.word_embeddings = np.array([word2vec[token] for token in vocab])
+
         self.word_frequency = word_frequency
         self.weightpara = weightpara
         self.rmpc = rmpc
 
-        (self.words, self.We) = load_word2vec(word2vec)
         word2weight = get_word_weight(word_frequency, weightpara)
         self.weight4ind = get_weight(self.words, word2weight)
 
-    def fit(self, X, y):
+    def fit(self, X=None, y=None):
         return self
 
     def transform(self, X):
@@ -185,16 +170,18 @@ class SIFEmbeddingVectorizer(BaseEstimator):
         w = seq2weight(x, m, self.weight4ind)  # get word weights
 
         # get SIF embedding
-        embedding = SIF_embedding(self.We, x, w, self.rmpc)  # embedding[i,:] is the embedding for sentence i
-
+        embedding = SIF_embedding(self.word_embeddings, x, w, self.rmpc)
+        # embedding[i,:] is the embedding for sentence i
         return embedding
 
 
 def main():
-    wordfile = 'data/glove.6B.50d.txt'
-    weightfile = 'auxiliary_data/enwiki_vocab_min200.txt'  # each line is a word and its frequency
+    import gensim
+    model = gensim.models.KeyedVectors.load_word2vec_format('data/glove.6B.50d_gensim.txt', binary=False)
+    # each line is a word and its frequency
+    weightfile = 'auxiliary_data/enwiki_vocab_min200.txt'
 
-    transformer = SIFEmbeddingVectorizer(wordfile, weightfile)
+    transformer = SIFEmbeddingVectorizer(model, weightfile)
 
     sentences = ['this is an example sentence', 'this is another sentence that is slightly longer',
                  'the quick brown fox jumps over the lazy dog']

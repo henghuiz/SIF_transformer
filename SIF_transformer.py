@@ -10,7 +10,7 @@ class SIFEmbeddingVectorizer(BaseEstimator):
         self.weightpara = weightpara
         self.rmpc = rmpc
 
-        (self.words, self.We) = SIF.getWordmap(word2vec)
+        (self.words, self.We) = SIF.load_word2vec(word2vec)
         word2weight = SIF.get_word_weight(word_frequency, weightpara)
         self.weight4ind = SIF.get_weight(self.words, word2weight)
 

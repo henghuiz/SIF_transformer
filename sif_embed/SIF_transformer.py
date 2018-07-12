@@ -3,7 +3,6 @@ from sklearn.base import BaseEstimator
 from sklearn.decomposition import TruncatedSVD
 from nltk.tokenize import WordPunctTokenizer
 
-
 def get_weighted_average(embedding, x, w):
     """
     Compute the weighted average vectors
@@ -73,23 +72,13 @@ def prepare_data(list_of_seqs):
     return x, x_mask
 
 
-def lookupIDX(words, w):
-    w = w.lower()
-    if len(w) > 1 and w[0] == '#':
-        w = w.replace("#", "")
-    if w in words:
-        return words[w]
-    elif 'UUUNKKK' in words:
-        return words['UUUNKKK']
+def simple_lookup(vocab_map, w):
+    if w in vocab_map.keys():
+        return vocab_map[w]
+    elif 'unk' in vocab_map.keys():
+        return vocab_map['unk']
     else:
-        return len(words) - 1
-
-# TODO: simplify this
-def get_sequences(p1, words):
-    X1 = []
-    for i in p1:
-        X1.append(lookupIDX(words, i))
-    return X1
+        return len(vocab_map) - 1
 
 
 def sentences2idx(sentences, words):
@@ -100,18 +89,18 @@ def sentences2idx(sentences, words):
     :return: x1, m1. x1[i, :] is the word indices in sentence i, m1[i,:] is the mask for sentence i (0 means no word at the location)
     """
     seq = []
-    for i in sentences:
-        seq.append(get_sequences(i, words))
+    for sent in sentences:
+        seq.append([simple_lookup(words, token) for token in sent])
     x1, m1 = prepare_data(seq)
     return x1, m1
 
 
-def get_word_weight(weightfile, a=1e-3):
+def get_word_weight(word_frequency, a=1e-3):
     if a <= 0:  # when the parameter makes no sense, use unweighted
         a = 1.0
 
     word2weight = {}
-    with open(weightfile) as f:
+    with open(word_frequency) as f:
         lines = f.readlines()
     N = 0
     for i in lines:
@@ -183,30 +172,3 @@ class SIFEmbeddingVectorizer(BaseEstimator):
         return embedding
 
 
-def main():
-    import gensim
-    from nltk.corpus import stopwords
-
-    model = gensim.models.KeyedVectors.load_word2vec_format('../data/glove.6B.50d_gensim.txt', binary=False)
-    # each line is a word and its frequency
-    weightfile = '../auxiliary_data/enwiki_vocab_min200.txt'
-
-    transformer = SIFEmbeddingVectorizer(model, weightfile)
-
-    sentences = ['this is an example sentence', 'this is another sentence that is slightly longer',
-                 'the quick brown fox jumps over the lazy dog']
-
-    embedding = transformer.transform(sentences)
-
-    emb1 = embedding[0, :]
-    emb2 = embedding[1, :]
-    inn = (emb1 * emb2).sum()
-    emb1norm = np.sqrt((emb1 * emb1).sum())
-    emb2norm = np.sqrt((emb2 * emb2).sum())
-    score = inn / emb1norm / emb2norm
-
-    print(score)
-
-
-if __name__ == '__main__':
-    main()

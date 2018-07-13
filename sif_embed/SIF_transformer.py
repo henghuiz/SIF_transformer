@@ -3,6 +3,7 @@ from sklearn.base import BaseEstimator
 from sklearn.decomposition import TruncatedSVD
 from nltk.tokenize import WordPunctTokenizer
 
+
 def get_weighted_average(embedding, x, w):
     """
     Compute the weighted average vectors
@@ -143,9 +144,10 @@ def simple_tokenizer(x):
 
 class SIFEmbeddingVectorizer(BaseEstimator):
     def __init__(self, word2vec, word_frequency, tokenizer=None, stopword=None, weightpara=1e-3, rmpc=1):
-        self.vocab = list(word2vec.vocab)
+        self.word2vec = word2vec
+        self.vocab = list(self.word2vec.vocab)
         self.words = {word: word_id for word_id, word in enumerate(self.vocab)}
-        self.word_embeddings = np.array([word2vec[token] for token in self.vocab])
+        self.word_embeddings = np.array([self.word2vec[token] for token in self.vocab])
 
         self.word_frequency = word_frequency
         self.weightpara = weightpara
@@ -170,5 +172,3 @@ class SIFEmbeddingVectorizer(BaseEstimator):
         embedding = SIF_embedding(self.word_embeddings, x, w, self.rmpc)
         # embedding[i,:] is the embedding for sentence i
         return embedding
-
-
